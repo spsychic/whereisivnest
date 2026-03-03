@@ -9,11 +9,22 @@ const appState = {
   selectedTicker: null,
   lastUpdated: null,
   isLoading: false,
+  ui: {
+    search: "",
+    sort: "return_desc",
+    returnFilter: "all",
+  },
 };
 
 const dom = {
   refreshButton: document.getElementById("refresh-button"),
   lastUpdated: document.getElementById("last-updated"),
+  systemStatus: document.getElementById("system-status"),
+  stockSearch: document.getElementById("stock-search"),
+  stockSort: document.getElementById("stock-sort"),
+  returnFilter: document.getElementById("return-filter"),
+  stockSummary: document.getElementById("stock-summary"),
+  newsStatus: document.getElementById("news-status"),
   stockList: document.getElementById("stock-list"),
   newsList: document.getElementById("news-list"),
   stockTemplate: document.getElementById("stock-item-template"),
@@ -119,48 +130,91 @@ function calcReturnRate(currentPrice, buyPrice) {
   return ((currentPrice - buyPrice) / buyPrice) * 100;
 }
 
-async function fetchPortfolio() {
-  try {
-    const res = await fetch(apiConfig.endpoints.portfolio);
-    if (!res.ok) throw new Error("portfolio fetch failed");
-    return res.json();
-  } catch {
-    return mockData.portfolio;
+async function fetchStrict(url, label) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`${label} fetch failed (${response.status})`);
   }
+  return response.json();
 }
 
-async function fetchPrices() {
-  try {
-    const res = await fetch(apiConfig.endpoints.prices);
-    if (!res.ok) throw new Error("prices fetch failed");
-    return res.json();
-  } catch {
-    return mockData.prices;
-  }
+function setSystemStatus(type, message) {
+  dom.systemStatus.className = `system-status ${type}`;
+  dom.systemStatus.textContent = message;
 }
 
-async function fetchNews() {
-  try {
-    const res = await fetch(apiConfig.endpoints.news);
-    if (!res.ok) throw new Error("news fetch failed");
-    return res.json();
-  } catch {
-    return mockData.news;
+function setLoading(loading) {
+  appState.isLoading = loading;
+  dom.refreshButton.disabled = loading;
+  dom.stockSearch.disabled = loading;
+  dom.stockSort.disabled = loading;
+  dom.returnFilter.disabled = loading;
+  dom.refreshButton.textContent = loading ? "갱신 중..." : "지금 새로고침";
+}
+
+function getEnrichedStocks() {
+  return appState.stocks.map((stock) => {
+    const currentPrice = Number(appState.prices[stock.ticker] || 0);
+    const buyPrice = Number(stock.buyPrice || 0);
+    const returnRate = calcReturnRate(currentPrice, buyPrice);
+    const marketValue = currentPrice * Number(stock.holdingQty || 0);
+    return {
+      ...stock,
+      currentPrice,
+      buyPrice,
+      returnRate,
+      marketValue,
+    };
+  });
+}
+
+function getVisibleStocks() {
+  const keyword = appState.ui.search.trim().toLowerCase();
+  let list = getEnrichedStocks();
+
+  if (keyword) {
+    list = list.filter((item) => {
+      const target = `${item.name} ${item.ticker}`.toLowerCase();
+      return target.includes(keyword);
+    });
   }
+
+  if (appState.ui.returnFilter === "gain") {
+    list = list.filter((item) => item.returnRate > 0);
+  } else if (appState.ui.returnFilter === "loss") {
+    list = list.filter((item) => item.returnRate < 0);
+  } else if (appState.ui.returnFilter === "flat") {
+    list = list.filter((item) => item.returnRate === 0);
+  }
+
+  const sorted = [...list];
+  if (appState.ui.sort === "return_desc") {
+    sorted.sort((a, b) => b.returnRate - a.returnRate);
+  } else if (appState.ui.sort === "return_asc") {
+    sorted.sort((a, b) => a.returnRate - b.returnRate);
+  } else if (appState.ui.sort === "value_desc") {
+    sorted.sort((a, b) => b.marketValue - a.marketValue);
+  } else if (appState.ui.sort === "name_asc") {
+    sorted.sort((a, b) => a.name.localeCompare(b.name, "ko-KR"));
+  }
+
+  return sorted;
 }
 
 function renderStocks() {
   dom.stockList.innerHTML = "";
-  if (!appState.stocks.length) {
-    dom.stockList.innerHTML = '<div class="empty-state">표시할 종목이 없습니다.</div>';
+  const visibleStocks = getVisibleStocks();
+
+  dom.stockSummary.textContent = `표시 ${visibleStocks.length} / 전체 ${appState.stocks.length}`;
+
+  if (!visibleStocks.length) {
+    dom.stockList.innerHTML = '<div class="empty-state">조건에 맞는 종목이 없습니다.</div>';
     return;
   }
 
-  for (const stock of appState.stocks) {
+  for (const stock of visibleStocks) {
     const fragment = dom.stockTemplate.content.cloneNode(true);
-    const currentPrice = appState.prices[stock.ticker] || 0;
-    const returnRate = calcReturnRate(currentPrice, stock.buyPrice);
-    const isUp = returnRate >= 0;
+    const isUp = stock.returnRate >= 0;
 
     const container = fragment.querySelector(".stock-item");
     const head = fragment.querySelector(".stock-head");
@@ -173,17 +227,17 @@ function renderStocks() {
     const snapshotDate = fragment.querySelector(".snapshot-date");
 
     nameEl.textContent = `${stock.name} (${stock.ticker})`;
-    headerReturn.textContent = formatPercent(returnRate);
+    headerReturn.textContent = formatPercent(stock.returnRate);
     headerReturn.className = `stock-return ${isUp ? "up" : "down"}`;
     qty.textContent = `${formatNumber(stock.holdingQty)}주`;
     buyPrice.textContent = `${formatNumber(stock.buyPrice)}원`;
-    nowPrice.textContent = `${formatNumber(currentPrice)}원`;
-    detailReturn.textContent = formatPercent(returnRate);
+    nowPrice.textContent = `${formatNumber(stock.currentPrice)}원`;
+    detailReturn.textContent = formatPercent(stock.returnRate);
     detailReturn.className = `return-rate ${isUp ? "up" : "down"}`;
     snapshotDate.textContent = stock.snapshotDate;
 
     if (appState.selectedTicker === stock.ticker) {
-      container.style.borderColor = "#8cb3e8";
+      container.classList.add("is-selected");
     }
 
     head.addEventListener("click", () => {
@@ -201,11 +255,13 @@ function renderNews() {
   let list = appState.news;
 
   if (appState.selectedTicker) {
-    const selected = list.filter(
-      (n) => !n.ticker || n.ticker === appState.selectedTicker,
-    );
+    const selected = list.filter((n) => !n.ticker || n.ticker === appState.selectedTicker);
     if (selected.length) list = selected;
   }
+
+  dom.newsStatus.textContent = appState.selectedTicker
+    ? `선택 종목 기준 뉴스 ${list.length}건`
+    : `전체 뉴스 ${list.length}건`;
 
   if (!list.length) {
     dom.newsList.innerHTML = '<div class="empty-state">표시할 뉴스가 없습니다.</div>';
@@ -218,12 +274,15 @@ function renderNews() {
     el.href = item.url || "#";
     el.target = "_blank";
     el.rel = "noopener noreferrer";
+
     const published = new Date(item.publishedAt);
     const title = document.createElement("strong");
     title.textContent = item.title;
+
     const meta = document.createElement("p");
     meta.className = "news-meta";
     meta.textContent = `${item.source} · ${formatDateTime(published)}`;
+
     el.appendChild(title);
     el.appendChild(meta);
     dom.newsList.appendChild(el);
@@ -235,53 +294,92 @@ function updateLastUpdated() {
   dom.lastUpdated.textContent = `마지막 갱신: ${formatDateTime(appState.lastUpdated)} KST`;
 }
 
+function ensureSelectedTicker() {
+  if (!appState.stocks.length) {
+    appState.selectedTicker = null;
+    return;
+  }
+  const hasCurrent = appState.stocks.some((item) => item.ticker === appState.selectedTicker);
+  if (!hasCurrent) {
+    appState.selectedTicker = appState.stocks[0].ticker;
+  }
+}
+
+function renderAll() {
+  ensureSelectedTicker();
+  renderStocks();
+  renderNews();
+}
+
 async function refreshAll() {
   if (appState.isLoading) return;
-  appState.isLoading = true;
-  dom.refreshButton.disabled = true;
-  dom.refreshButton.textContent = "갱신 중...";
-  try {
-    const [portfolio, prices, news] = await Promise.all([
-      fetchPortfolio(),
-      fetchPrices(),
-      fetchNews(),
-    ]);
-    appState.stocks = portfolio;
-    appState.prices = prices;
-    appState.news = news;
-    if (!appState.selectedTicker && appState.stocks.length) {
-      appState.selectedTicker = appState.stocks[0].ticker;
-    }
-    renderStocks();
-    renderNews();
-    updateLastUpdated();
-    safelyRenderAds();
-  } catch (error) {
-    console.error(error);
-  } finally {
-    appState.isLoading = false;
-    dom.refreshButton.disabled = false;
-    dom.refreshButton.textContent = "지금 새로고침";
+
+  setLoading(true);
+  setSystemStatus("loading", "전체 데이터를 갱신하는 중입니다...");
+
+  const results = await Promise.allSettled([
+    fetchStrict(apiConfig.endpoints.portfolio, "portfolio"),
+    fetchStrict(apiConfig.endpoints.prices, "prices"),
+    fetchStrict(apiConfig.endpoints.news, "news"),
+  ]);
+
+  const degraded = [];
+
+  if (results[0].status === "fulfilled") {
+    appState.stocks = results[0].value;
+  } else {
+    appState.stocks = mockData.portfolio;
+    degraded.push("보유종목");
   }
+
+  if (results[1].status === "fulfilled") {
+    appState.prices = results[1].value;
+  } else {
+    appState.prices = mockData.prices;
+    degraded.push("가격");
+  }
+
+  if (results[2].status === "fulfilled") {
+    appState.news = results[2].value;
+  } else {
+    appState.news = mockData.news;
+    degraded.push("뉴스");
+  }
+
+  renderAll();
+  updateLastUpdated();
+  safelyRenderAds();
+
+  if (degraded.length) {
+    setSystemStatus("warn", `일부 데이터(${degraded.join(", ")})는 임시 데이터로 표시 중입니다.`);
+  } else {
+    setSystemStatus("ok", "모든 데이터가 정상 갱신되었습니다.");
+  }
+
+  setLoading(false);
 }
 
 async function refreshPricesOnly() {
   try {
-    appState.prices = await fetchPrices();
+    appState.prices = await fetchStrict(apiConfig.endpoints.prices, "prices");
     renderStocks();
     updateLastUpdated();
+    setSystemStatus("ok", "가격 데이터가 갱신되었습니다.");
   } catch (error) {
     console.error(error);
+    setSystemStatus("warn", "가격 데이터 갱신에 실패했습니다. 이전 값을 유지합니다.");
   }
 }
 
 async function refreshNewsOnly() {
   try {
-    appState.news = await fetchNews();
+    appState.news = await fetchStrict(apiConfig.endpoints.news, "news");
     renderNews();
     updateLastUpdated();
+    setSystemStatus("ok", "뉴스 데이터가 갱신되었습니다.");
   } catch (error) {
     console.error(error);
+    setSystemStatus("warn", "뉴스 데이터 갱신에 실패했습니다. 이전 값을 유지합니다.");
   }
 }
 
@@ -301,8 +399,26 @@ function setupIntervals() {
   setInterval(refreshAll, REFRESH_FULL_MS);
 }
 
+function setupControls() {
+  dom.stockSearch.addEventListener("input", (event) => {
+    appState.ui.search = event.target.value;
+    renderStocks();
+  });
+
+  dom.stockSort.addEventListener("change", (event) => {
+    appState.ui.sort = event.target.value;
+    renderStocks();
+  });
+
+  dom.returnFilter.addEventListener("change", (event) => {
+    appState.ui.returnFilter = event.target.value;
+    renderStocks();
+  });
+}
+
 function boot() {
   dom.refreshButton.addEventListener("click", refreshAll);
+  setupControls();
   refreshAll();
   setupIntervals();
 }

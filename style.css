@@ -70,6 +70,34 @@ h1, h2, h3, p {
   gap: 16px;
 }
 
+.system-status {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f7fbff;
+  color: #2a4769;
+  font-size: 14px;
+}
+
+.system-status.loading {
+  background: #fff8e9;
+  border-color: #f0d9a8;
+  color: #7a5812;
+}
+
+.system-status.ok {
+  background: #eefbf2;
+  border-color: #bde3c9;
+  color: #1d6c39;
+}
+
+.system-status.warn {
+  background: #fff4f2;
+  border-color: #f0c5bf;
+  color: #8a3026;
+}
+
 .panel {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -81,6 +109,30 @@ h1, h2, h3, p {
   margin-top: 8px;
   color: var(--muted);
   font-size: 14px;
+}
+
+.stock-controls {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) 180px 160px;
+  gap: 8px;
+}
+
+.stock-controls input,
+.stock-controls select {
+  width: 100%;
+  border: 1px solid #c8d5e5;
+  border-radius: 10px;
+  padding: 9px 10px;
+  background: #fff;
+  font: inherit;
+}
+
+.stock-summary,
+.news-status {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .stock-list,
@@ -95,6 +147,11 @@ h1, h2, h3, p {
   border: 1px solid var(--line);
   border-radius: 12px;
   overflow: hidden;
+}
+
+.stock-item.is-selected {
+  border-color: #8cb3e8;
+  box-shadow: 0 0 0 1px #c8dcf8 inset;
 }
 
 .stock-head {
@@ -228,6 +285,10 @@ h1, h2, h3, p {
   }
 
   .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .stock-controls {
     grid-template-columns: 1fr;
   }
 
