@@ -15,6 +15,8 @@ const ADSENSE_CLIENT = process.env.ADSENSE_CLIENT || "ca-pub-REPLACE_ME";
 const ADSENSE_SLOT = process.env.ADSENSE_SLOT || "REPLACE_ME";
 const PORTFOLIO_LIMIT = Number(process.env.PORTFOLIO_LIMIT || 120);
 const METRICS_LOG_INTERVAL_MS = 10 * 60_000;
+const PRICES_CACHE_TTL_MS = 60_000;
+const NEWS_CACHE_TTL_MS = 10 * 60_000;
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -30,6 +32,11 @@ const metrics = {
   priceNaver: { attempts: 0, successes: 0, failures: 0 },
   newsGoogle: { attempts: 0, successes: 0, failures: 0 },
   newsNaver: { attempts: 0, successes: 0, failures: 0 },
+};
+
+const apiCache = {
+  prices: { value: null, expiresAt: 0, pending: null },
+  news: { value: null, expiresAt: 0, pending: null },
 };
 
 function markMetricAttempt(name) {
@@ -79,9 +86,60 @@ function loadEnv(filePath) {
   }
 }
 
-function sendJson(res, code, payload) {
-  res.writeHead(code, { "Content-Type": MIME_TYPES[".json"] });
+function buildDefaultHeaders(extra = {}) {
+  return {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "SAMEORIGIN",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Content-Security-Policy": "default-src 'self' https: data: blob: 'unsafe-inline';",
+    ...extra,
+  };
+}
+
+function sendJson(res, code, payload, headers = {}) {
+  res.writeHead(
+    code,
+    buildDefaultHeaders({
+      "Content-Type": MIME_TYPES[".json"],
+      "Cache-Control": "no-store",
+      ...headers,
+    }),
+  );
   res.end(JSON.stringify(payload, null, 2));
+}
+
+function sendError(res, status, code, message, details = null) {
+  sendJson(res, status, {
+    error: {
+      code,
+      message,
+      details,
+    },
+    timestamp: new Date().toISOString(),
+  });
+}
+
+async function getCachedResource(key, ttlMs, loader) {
+  const cache = apiCache[key];
+  if (!cache) return loader();
+
+  if (cache.value && Date.now() < cache.expiresAt) {
+    return cache.value;
+  }
+  if (cache.pending) {
+    return cache.pending;
+  }
+
+  cache.pending = (async () => {
+    const value = await loader();
+    cache.value = value;
+    cache.expiresAt = Date.now() + ttlMs;
+    return value;
+  })().finally(() => {
+    cache.pending = null;
+  });
+
+  return cache.pending;
 }
 
 function safeHtmlDecode(text) {
@@ -392,7 +450,7 @@ async function handleApi(req, res, pathname) {
 
   if (pathname === "/api/prices") {
     try {
-      const items = await buildPortfolioData();
+      const items = await getCachedResource("prices", PRICES_CACHE_TTL_MS, buildPortfolioData);
       const prices = {};
       for (const item of items) {
         prices[item.ticker] = item.currentPrice;
@@ -410,7 +468,7 @@ async function handleApi(req, res, pathname) {
 
   if (pathname === "/api/news") {
     try {
-      const news = await buildNewsData();
+      const news = await getCachedResource("news", NEWS_CACHE_TTL_MS, buildNewsData);
       sendJson(res, 200, news);
       logMetricsSummary("api-news");
       return;
@@ -422,13 +480,19 @@ async function handleApi(req, res, pathname) {
     }
   }
 
-  sendJson(res, 404, { error: "not_found" });
+  sendError(res, 404, "not_found", "Requested API endpoint was not found.");
 }
 
 async function handleStatic(req, res, pathname) {
   if (pathname === "/ads.txt") {
     const body = `google.com, ${ADSENSE_CLIENT.replace("ca-pub-", "pub-")}, DIRECT, f08c47fec0942fa0\n`;
-    res.writeHead(200, { "Content-Type": MIME_TYPES[".txt"] });
+    res.writeHead(
+      200,
+      buildDefaultHeaders({
+        "Content-Type": MIME_TYPES[".txt"],
+        "Cache-Control": "public, max-age=3600",
+      }),
+    );
     res.end(body);
     return;
   }
@@ -436,7 +500,7 @@ async function handleStatic(req, res, pathname) {
   const safePath = pathname === "/" ? "/index.html" : pathname;
   const abs = path.join(ROOT, safePath);
   if (!abs.startsWith(ROOT)) {
-    sendJson(res, 403, { error: "forbidden" });
+    sendError(res, 403, "forbidden", "Access to this resource is forbidden.");
     return;
   }
 
@@ -444,7 +508,15 @@ async function handleStatic(req, res, pathname) {
     const data = await fsp.readFile(abs);
     const ext = path.extname(abs);
     const mime = MIME_TYPES[ext] || "application/octet-stream";
-    res.writeHead(200, { "Content-Type": mime });
+    const cacheControl =
+      ext === ".html" ? "no-cache" : "public, max-age=300";
+    res.writeHead(
+      200,
+      buildDefaultHeaders({
+        "Content-Type": mime,
+        "Cache-Control": cacheControl,
+      }),
+    );
     if (ext === ".html") {
       let text = data.toString("utf8");
       text = text.replaceAll("__ADSENSE_CLIENT__", ADSENSE_CLIENT);
@@ -455,10 +527,10 @@ async function handleStatic(req, res, pathname) {
     res.end(data);
   } catch (error) {
     if (error.code === "ENOENT") {
-      sendJson(res, 404, { error: "not_found" });
+      sendError(res, 404, "not_found", "Requested static resource was not found.");
       return;
     }
-    sendJson(res, 500, { error: "server_error", message: error.message });
+    sendError(res, 500, "server_error", "Unexpected server error.", error.message);
   }
 }
 

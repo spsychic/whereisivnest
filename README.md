@@ -120,3 +120,12 @@ CSV 컬럼:
 
 - 서버는 `/api/prices`, `/api/news` 호출 시 가격/뉴스 소스별 시도/성공/실패/실패율을 로그로 출력합니다.
 - 주기 로그는 10분 간격으로 출력됩니다.
+
+## 운영 안정화 기본값
+
+- API 캐시(TTL):
+  - `/api/prices`: 60초
+  - `/api/news`: 10분
+- 기본 보안 헤더:
+  - `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Content-Security-Policy`
+- API 오류 응답은 공통 형식(`error.code`, `error.message`, `timestamp`)으로 반환됩니다.
