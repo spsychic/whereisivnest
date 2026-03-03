@@ -182,6 +182,11 @@ h1, h2, h3, p {
   font-weight: 700;
 }
 
+.return-rate.neutral {
+  color: #6b7a8d;
+  font-weight: 600;
+}
+
 .stock-detail {
   padding: 12px 14px;
   border-top: 1px solid var(--line);

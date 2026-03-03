@@ -112,6 +112,18 @@ function formatPercent(value) {
   return `${sign}${value.toFixed(2)}%`;
 }
 
+function formatMaybeMoney(value, unit) {
+  const numeric = Number(value || 0);
+  if (!numeric) return "미입력";
+  return `${formatNumber(numeric)}${unit}`;
+}
+
+function formatMaybeQty(value) {
+  const numeric = Number(value || 0);
+  if (!numeric) return "미입력";
+  return `${formatNumber(numeric)}주`;
+}
+
 function formatDateTime(dateObj) {
   return new Intl.DateTimeFormat("ko-KR", {
     year: "numeric",
@@ -204,8 +216,11 @@ function getVisibleStocks() {
 function renderStocks() {
   dom.stockList.innerHTML = "";
   const visibleStocks = getVisibleStocks();
+  const missingQtyCount = appState.stocks.filter((item) => !Number(item.holdingQty || 0)).length;
 
-  dom.stockSummary.textContent = `표시 ${visibleStocks.length} / 전체 ${appState.stocks.length}`;
+  dom.stockSummary.textContent =
+    `표시 ${visibleStocks.length} / 전체 ${appState.stocks.length} · ` +
+    `수량 미입력 ${missingQtyCount}`;
 
   if (!visibleStocks.length) {
     dom.stockList.innerHTML = '<div class="empty-state">조건에 맞는 종목이 없습니다.</div>';
@@ -229,11 +244,15 @@ function renderStocks() {
     nameEl.textContent = `${stock.name} (${stock.ticker})`;
     headerReturn.textContent = formatPercent(stock.returnRate);
     headerReturn.className = `stock-return ${isUp ? "up" : "down"}`;
-    qty.textContent = `${formatNumber(stock.holdingQty)}주`;
-    buyPrice.textContent = `${formatNumber(stock.buyPrice)}원`;
-    nowPrice.textContent = `${formatNumber(stock.currentPrice)}원`;
+    qty.textContent = formatMaybeQty(stock.holdingQty);
+    buyPrice.textContent = formatMaybeMoney(stock.buyPrice, "원");
+    nowPrice.textContent = formatMaybeMoney(stock.currentPrice, "원");
     detailReturn.textContent = formatPercent(stock.returnRate);
     detailReturn.className = `return-rate ${isUp ? "up" : "down"}`;
+    if (!stock.buyPrice || !stock.currentPrice) {
+      detailReturn.textContent = "미입력";
+      detailReturn.className = "return-rate neutral";
+    }
     snapshotDate.textContent = stock.snapshotDate;
 
     if (appState.selectedTicker === stock.ticker) {
