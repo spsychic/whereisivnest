@@ -1,14 +1,84 @@
 <!doctype html>
-<html lang="en">
+<html lang="ko">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hello World</title>
-  <link href='/style.css' rel='stylesheet'>
+  <meta
+    name="description"
+    content="국민연금 보유 종목과 현재 수익률, 관련 뉴스를 한 눈에 확인하는 대시보드"
+  />
+  <title>Where Is Invest | 국민연금 투자 현황</title>
+  <link href="/style.css" rel="stylesheet" />
 </head>
 <body>
-  <h1>Hello, world!</h1>
-  <button onclick="console.log('hello');">Press me</button>
+  <header class="topbar">
+    <div>
+      <h1>Where Is Invest</h1>
+      <p class="subtitle">국민연금 투자 현황 대시보드</p>
+    </div>
+    <div class="topbar-actions">
+      <p id="last-updated">마지막 갱신: -</p>
+      <button id="refresh-button" type="button">지금 새로고침</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel panel-left">
+      <h2>보유 종목</h2>
+      <p class="panel-description">
+        최신 공시 기준 보유 내역과 실시간 가격 기반 수익률을 제공합니다.
+      </p>
+      <div id="stock-list" class="stock-list"></div>
+    </section>
+
+    <aside class="panel panel-right">
+      <h2>관련 뉴스</h2>
+      <p class="panel-description">
+        종목 클릭 시 해당 종목 중심 뉴스로 정렬됩니다.
+      </p>
+      <div id="news-list" class="news-list"></div>
+
+      <section class="ad-box" aria-label="광고 영역">
+        <h3>광고</h3>
+        <p class="ad-note">
+          AdSense 값은 서버가 <code>.env</code>에서 자동으로 주입합니다.
+        </p>
+        <ins
+          class="adsbygoogle ad-slot"
+          style="display:block"
+          data-ad-client="__ADSENSE_CLIENT__"
+          data-ad-slot="__ADSENSE_SLOT__"
+          data-ad-format="auto"
+          data-full-width-responsive="true"
+        ></ins>
+      </section>
+    </aside>
+  </main>
+
+  <footer class="site-footer">
+    <a href="/privacy.html">개인정보처리방침</a>
+    <a href="/disclaimer.html">면책 고지</a>
+  </footer>
+
+  <template id="stock-item-template">
+    <article class="stock-item">
+      <button class="stock-head" type="button">
+        <span class="stock-name"></span>
+        <span class="stock-return"></span>
+      </button>
+      <div class="stock-detail">
+        <dl>
+          <div><dt>보유 수량</dt><dd class="holding-qty"></dd></div>
+          <div><dt>매입 단가</dt><dd class="buy-price"></dd></div>
+          <div><dt>현재 가격</dt><dd class="current-price"></dd></div>
+          <div><dt>수익률</dt><dd class="return-rate"></dd></div>
+          <div><dt>기준일</dt><dd class="snapshot-date"></dd></div>
+        </dl>
+      </div>
+    </article>
+  </template>
+
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=__ADSENSE_CLIENT__" crossorigin="anonymous"></script>
   <script defer type="text/javascript" src="/main.js"></script>
 </body>
 </html>

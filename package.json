@@ -1,0 +1,11 @@
+{
+  "name": "whereisinvest",
+  "version": "1.0.0",
+  "private": true,
+  "description": "NPS portfolio dashboard with live prices and news",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check main.js && node --check server.js && node --check scripts/csv-to-portfolio.js",
+    "import:portfolio": "node scripts/csv-to-portfolio.js"
+  }
+}

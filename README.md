@@ -1,1 +1,115 @@
-A simple HTML/JS/CSS starter template
+# Where Is Invest
+
+국민연금 투자 현황(공시 기준) + 실시간 가격 기반 수익률 + 관련 뉴스를 보여주는 정적 웹 MVP입니다.
+
+## 현재 구현된 기능
+
+- 상단: 사이트 제목, 마지막 갱신 시각, 수동 새로고침 버튼
+- 좌측: 보유 종목 목록, 클릭 시 보유수량/매입단가/현재가/수익률/기준일 표시
+- 우측: 선택 종목 관련 뉴스 목록
+- 자동 갱신:
+  - 가격: 1분
+  - 뉴스: 10분
+  - 전체: 30분
+- 하단 광고 영역 + AdSense 삽입 구조
+- 정책 페이지:
+  - `/privacy.html`
+  - `/disclaimer.html`
+
+## 실행 방법
+
+```bash
+cp .env.example .env
+npm start
+```
+
+브라우저에서 `http://localhost:8080` 접속
+
+## 실데이터 연동 포인트
+
+프론트는 이미 아래 로컬 API를 사용하도록 연결되어 있습니다.
+
+- `/api/portfolio`
+- `/api/prices`
+- `/api/news`
+
+- `portfolio` 응답 예시
+
+```json
+[
+  {
+    "ticker": "005930.KS",
+    "name": "삼성전자",
+    "holdingQty": 1800000,
+    "buyPrice": 69000,
+    "snapshotDate": "2025-12-31"
+  }
+]
+```
+
+- `prices` 응답 예시
+
+```json
+{
+  "005930.KS": 74800
+}
+```
+
+- `news` 응답 예시
+
+```json
+[
+  {
+    "id": "n1",
+    "ticker": "005930.KS",
+    "title": "뉴스 제목",
+    "source": "언론사",
+    "publishedAt": "2026-03-02T12:10:00+09:00",
+    "url": "https://news.example.com/article/1"
+  }
+]
+```
+
+## AdSense 적용
+
+1. `.env`에 아래 값 입력
+- `ADSENSE_CLIENT=ca-pub-xxxxxxxxxxxxxxxx`
+- `ADSENSE_SLOT=xxxxxxxxxx`
+2. 서버 재시작(`npm start`)
+3. 배포 후 `https://도메인/ads.txt` 접근 가능 여부 확인
+
+## 직접 준비해야 하는 것
+
+- `data/portfolio.json`의 실제 국민연금 보유종목/수량 업데이트
+- 시세 API 권한/계약(실시간 가격)
+- 뉴스 API 키
+- AdSense 계정 승인 + 퍼블리셔 ID
+- 운영 도메인 + HTTPS
+
+## 연동 상세
+
+- 가격: Yahoo Finance quote API (서버 측 호출)
+- 뉴스:
+  - 기본값: Google News RSS
+  - 선택사항: `.env`에 NAVER 키 입력 시 네이버 뉴스 API 사용
+- 보유내역: `data/portfolio.json` 기준
+
+## 1단계: 보유종목 실데이터 반영
+
+1. `data/portfolio.csv`를 열고 실제 보유 데이터로 교체
+2. 아래 명령 실행
+
+```bash
+npm run import:portfolio
+```
+
+3. `data/portfolio.json`이 자동 생성/갱신되면 완료
+
+CSV 컬럼:
+
+- `ticker`: 종목코드(예: `005930`)
+- `name`: 종목명
+- `keyword`: 뉴스 검색 키워드
+- `holdingQty`: 보유수량
+- `buyPrice`: 매입단가(모르면 `0`)
+- `snapshotDate`: 기준일(`YYYY-MM-DD`)
