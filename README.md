@@ -104,6 +104,8 @@ npm run import:portfolio
 ```
 
 3. `data/portfolio.json`이 자동 생성/갱신되면 완료
+   - 중복 티커/잘못된 티커 형식/잘못된 날짜 형식이 있으면 변환이 실패합니다.
+   - `holdingQty=0`, `buyPrice=0`은 경고로 출력됩니다.
 
 CSV 컬럼:
 
@@ -113,3 +115,8 @@ CSV 컬럼:
 - `holdingQty`: 보유수량
 - `buyPrice`: 매입단가(모르면 `0`)
 - `snapshotDate`: 기준일(`YYYY-MM-DD`)
+
+## 운영 로그 확인
+
+- 서버는 `/api/prices`, `/api/news` 호출 시 가격/뉴스 소스별 시도/성공/실패/실패율을 로그로 출력합니다.
+- 주기 로그는 10분 간격으로 출력됩니다.

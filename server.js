@@ -14,6 +14,7 @@ const NAVER_CLIENT_SECRET = process.env.NAVER_CLIENT_SECRET || "";
 const ADSENSE_CLIENT = process.env.ADSENSE_CLIENT || "ca-pub-REPLACE_ME";
 const ADSENSE_SLOT = process.env.ADSENSE_SLOT || "REPLACE_ME";
 const PORTFOLIO_LIMIT = Number(process.env.PORTFOLIO_LIMIT || 120);
+const METRICS_LOG_INTERVAL_MS = 10 * 60_000;
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -23,6 +24,41 @@ const MIME_TYPES = {
   ".txt": "text/plain; charset=utf-8",
   ".ico": "image/x-icon",
 };
+
+const metrics = {
+  priceYahoo: { attempts: 0, successes: 0, failures: 0 },
+  priceNaver: { attempts: 0, successes: 0, failures: 0 },
+  newsGoogle: { attempts: 0, successes: 0, failures: 0 },
+  newsNaver: { attempts: 0, successes: 0, failures: 0 },
+};
+
+function markMetricAttempt(name) {
+  const target = metrics[name];
+  if (!target) return;
+  target.attempts += 1;
+}
+
+function markMetricResult(name, ok) {
+  const target = metrics[name];
+  if (!target) return;
+  if (ok) target.successes += 1;
+  else target.failures += 1;
+}
+
+function metricFailureRate(item) {
+  if (!item.attempts) return "0.00";
+  return ((item.failures / item.attempts) * 100).toFixed(2);
+}
+
+function logMetricsSummary(context = "periodic") {
+  const pairs = Object.entries(metrics).map(([name, item]) => {
+    return (
+      `${name}(attempts=${item.attempts},success=${item.successes},` +
+      `fail=${item.failures},failRate=${metricFailureRate(item)}%)`
+    );
+  });
+  console.log(`[METRIC][${context}] ${pairs.join(" | ")}`);
+}
 
 function loadEnv(filePath) {
   try {
@@ -110,6 +146,7 @@ async function fetchCurrentPrices(tickers) {
   for (let i = 0; i < normalized.length; i += chunkSize) {
     const symbols = normalized.slice(i, i + chunkSize).join(",");
     const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbols)}`;
+    markMetricAttempt("priceYahoo");
     try {
       const data = await fetchJson(url);
       for (const item of data.quoteResponse?.result || []) {
@@ -119,7 +156,9 @@ async function fetchCurrentPrices(tickers) {
           out[symbol] = value;
         }
       }
+      markMetricResult("priceYahoo", true);
     } catch {
+      markMetricResult("priceYahoo", false);
       // Continue best-effort even if one chunk request fails.
     }
   }
@@ -149,6 +188,7 @@ async function fetchNaverPricesForTickers(tickers) {
     const url =
       `https://polling.finance.naver.com/api/realtime?query=${encodeURIComponent(query)}` +
       "&src=web";
+    markMetricAttempt("priceNaver");
 
     try {
       const data = await fetchJson(url);
@@ -161,7 +201,9 @@ async function fetchNaverPricesForTickers(tickers) {
           prices[symbol] = value;
         }
       }
+      markMetricResult("priceNaver", true);
     } catch {
+      markMetricResult("priceNaver", false);
       // Naver fallback is best-effort.
     }
   }
@@ -296,9 +338,25 @@ async function buildNewsData() {
     const symbol = tickerToYahooSymbol(item.ticker);
     const keyword = item.keyword || item.name;
     if (NAVER_CLIENT_ID && NAVER_CLIENT_SECRET) {
-      return fetchNaverNewsByKeyword(keyword, symbol, 4);
+      markMetricAttempt("newsNaver");
+      try {
+        const items = await fetchNaverNewsByKeyword(keyword, symbol, 4);
+        markMetricResult("newsNaver", true);
+        return items;
+      } catch {
+        markMetricResult("newsNaver", false);
+        return [];
+      }
     }
-    return fetchGoogleNewsByKeyword(keyword, symbol, 4);
+    markMetricAttempt("newsGoogle");
+    try {
+      const items = await fetchGoogleNewsByKeyword(keyword, symbol, 4);
+      markMetricResult("newsGoogle", true);
+      return items;
+    } catch {
+      markMetricResult("newsGoogle", false);
+      return [];
+    }
   });
 
   const chunked = await Promise.all(tasks);
@@ -340,10 +398,12 @@ async function handleApi(req, res, pathname) {
         prices[item.ticker] = item.currentPrice;
       }
       sendJson(res, 200, prices);
+      logMetricsSummary("api-prices");
       return;
     } catch {
       const holdings = (await readPortfolioConfig()).slice(0, PORTFOLIO_LIMIT);
       sendJson(res, 200, buildFallbackPrices(holdings));
+      logMetricsSummary("api-prices-fallback");
       return;
     }
   }
@@ -352,10 +412,12 @@ async function handleApi(req, res, pathname) {
     try {
       const news = await buildNewsData();
       sendJson(res, 200, news);
+      logMetricsSummary("api-news");
       return;
     } catch {
       const holdings = (await readPortfolioConfig()).slice(0, PORTFOLIO_LIMIT);
       sendJson(res, 200, buildFallbackNews(holdings));
+      logMetricsSummary("api-news-fallback");
       return;
     }
   }
@@ -414,3 +476,7 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, () => {
   console.log(`WhereIsInvest server running: http://localhost:${PORT}`);
 });
+
+setInterval(() => {
+  logMetricsSummary("interval");
+}, METRICS_LOG_INTERVAL_MS);
