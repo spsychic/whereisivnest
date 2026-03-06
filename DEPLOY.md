@@ -27,8 +27,24 @@ Check:
    - `NODE_ENV=production`
    - `ADSENSE_CLIENT` (optional)
    - `ADSENSE_SLOT` (optional)
+   - `FORMSPREE_ENDPOINT` (optional)
    - `NAVER_CLIENT_ID` (optional)
    - `NAVER_CLIENT_SECRET` (optional)
+
+## Cloudflare Pages
+
+Cloudflare Pages is static hosting, so `server.js` is not executed.
+This repository includes `functions/_middleware.js` to replace HTML placeholders at runtime.
+
+1. Connect this GitHub repository to a Pages project.
+2. Build command: none, Output directory: `/` (root).
+3. Set Pages Environment Variables:
+   - `ADSENSE_CLIENT` (optional)
+   - `ADSENSE_SLOT` (optional)
+   - `FORMSPREE_ENDPOINT` (optional, e.g. `https://formspree.io/f/xxxxxxxx`)
+4. Deploy and verify:
+   - `/` has no `__ADSENSE_*` / `__FORMSPREE_ENDPOINT__` placeholders
+   - 문의 폼 submit action is your Formspree endpoint
 
 ## Docker
 
