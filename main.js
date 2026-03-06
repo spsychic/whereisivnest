@@ -16,6 +16,8 @@ const appState = {
   },
 };
 
+const runtimeConfig = window.WHEREISINVEST_CONFIG || {};
+
 const dom = {
   refreshButton: document.getElementById("refresh-button"),
   lastUpdated: document.getElementById("last-updated"),
@@ -222,6 +224,33 @@ function setLoading(loading) {
   dom.stockSort.disabled = loading;
   dom.returnFilter.disabled = loading;
   dom.refreshButton.textContent = loading ? "갱신 중..." : "지금 새로고침";
+}
+
+function isValidFormspreeEndpoint(value) {
+  if (typeof value !== "string") return false;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === "#" || trimmed.includes("__FORMSPREE_ENDPOINT__")) return false;
+  return /^https:\/\/formspree\.io\/f\/[A-Za-z0-9]+$/.test(trimmed);
+}
+
+function isValidAdsenseClient(value) {
+  if (typeof value !== "string") return false;
+  return /^ca-pub-\d{10,}$/.test(value.trim());
+}
+
+function isValidAdsenseSlot(value) {
+  if (typeof value !== "string") return false;
+  return /^\d{6,}$/.test(value.trim());
+}
+
+function loadAdsenseScript(client) {
+  const src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(client)}`;
+  if (document.querySelector(`script[src="${src}"]`)) return;
+  const script = document.createElement("script");
+  script.async = true;
+  script.crossOrigin = "anonymous";
+  script.src = src;
+  document.head.appendChild(script);
 }
 
 function getEnrichedStocks() {
@@ -550,9 +579,17 @@ async function refreshNewsOnly() {
 
 function safelyRenderAds() {
   try {
-    if (window.adsbygoogle) {
-      (window.adsbygoogle = window.adsbygoogle || []).push({});
-    }
+    const adSlot = document.querySelector(".ad-slot");
+    if (!adSlot) return;
+
+    const client = String(runtimeConfig.adsenseClient || "").trim();
+    const slot = String(runtimeConfig.adsenseSlot || "").trim();
+    if (!isValidAdsenseClient(client) || !isValidAdsenseSlot(slot)) return;
+
+    adSlot.setAttribute("data-ad-client", client);
+    adSlot.setAttribute("data-ad-slot", slot);
+    loadAdsenseScript(client);
+    if (window.adsbygoogle) (window.adsbygoogle = window.adsbygoogle || []).push({});
   } catch (error) {
     console.debug("AdSense rendering skipped:", error.message);
   }
@@ -590,8 +627,12 @@ function setContactStatus(type, message) {
 function setupContactForm() {
   if (!dom.contactForm || !dom.contactSubmit) return;
 
-  const action = String(dom.contactForm.getAttribute("action") || "").trim();
-  const enabled = Boolean(action) && action !== "#" && !action.includes("__FORMSPREE_ENDPOINT__");
+  const endpointFromConfig = String(runtimeConfig.formspreeEndpoint || "").trim();
+  const actionFromDom = String(dom.contactForm.getAttribute("action") || "").trim();
+  const action = isValidFormspreeEndpoint(endpointFromConfig)
+    ? endpointFromConfig
+    : actionFromDom;
+  const enabled = isValidFormspreeEndpoint(action);
 
   if (!enabled) {
     const fields = dom.contactForm.querySelectorAll("input, textarea, button");
@@ -599,6 +640,8 @@ function setupContactForm() {
     setContactStatus("warn", "문의 폼이 아직 활성화되지 않았습니다. 관리자 설정 후 이용 가능합니다.");
     return;
   }
+
+  dom.contactForm.setAttribute("action", action);
 
   dom.contactForm.addEventListener("submit", async (event) => {
     event.preventDefault();

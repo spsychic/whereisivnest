@@ -34,17 +34,17 @@ Check:
 ## Cloudflare Pages
 
 Cloudflare Pages is static hosting, so `server.js` is not executed.
-This repository includes `functions/_middleware.js` to replace HTML placeholders at runtime.
+This repository uses `config.js` for client-side runtime settings.
 
 1. Connect this GitHub repository to a Pages project.
 2. Build command: none, Output directory: `/` (root).
-3. Set Pages Environment Variables:
-   - `ADSENSE_CLIENT` (optional)
-   - `ADSENSE_SLOT` (optional)
-   - `FORMSPREE_ENDPOINT` (optional, e.g. `https://formspree.io/f/xxxxxxxx`)
+3. Edit `config.js` before deploy:
+   - `formspreeEndpoint` (optional, e.g. `https://formspree.io/f/xxxxxxxx`)
+   - `adsenseClient` (optional, e.g. `ca-pub-1234...`)
+   - `adsenseSlot` (optional, e.g. `1234567890`)
 4. Deploy and verify:
-   - `/` has no `__ADSENSE_*` / `__FORMSPREE_ENDPOINT__` placeholders
    - 문의 폼 submit action is your Formspree endpoint
+   - 광고 슬롯이 정상 렌더링됨
 
 ## Docker
 
