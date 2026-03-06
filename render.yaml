@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: whereisinvest
+    env: node
+    plan: free
+    buildCommand: "echo 'No build step required'"
+    startCommand: "node server.js"
+    autoDeploy: false
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000

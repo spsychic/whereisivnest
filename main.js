@@ -25,6 +25,8 @@ const dom = {
   returnFilter: document.getElementById("return-filter"),
   stockSummary: document.getElementById("stock-summary"),
   newsStatus: document.getElementById("news-status"),
+  reliabilityNote: document.getElementById("reliability-note"),
+  sourceList: document.getElementById("source-list"),
   stockList: document.getElementById("stock-list"),
   newsList: document.getElementById("news-list"),
   stockTemplate: document.getElementById("stock-item-template"),
@@ -33,10 +35,35 @@ const dom = {
 const apiConfig = {
   endpoints: {
     portfolio: "/api/portfolio",
+    portfolioStatic: "/data/portfolio.json",
+    pricesStatic: "/data/prices.fallback.json",
     prices: "/api/prices",
     news: "/api/news",
   },
 };
+
+const DATA_SOURCES = [
+  {
+    label: "국민연금 기금운용본부 공시(국내주식 종목별 투자 현황)",
+    url: "https://fund.nps.or.kr/impa/edwmpblnt/getOHEF0001M0.do",
+    note: "보유 종목/평가액 기준",
+  },
+  {
+    label: "네이버 증권 과거 시세 API",
+    url: "https://fchart.stock.naver.com/",
+    note: "기준일 종가(매입단가 대체값 산출)",
+  },
+  {
+    label: "네이버 증권 실시간 시세 API",
+    url: "https://polling.finance.naver.com/api/realtime",
+    note: "현재가",
+  },
+  {
+    label: "Google News RSS",
+    url: "https://news.google.com/rss",
+    note: "기본 뉴스 소스",
+  },
+];
 
 const mockData = {
   portfolio: [
@@ -142,12 +169,42 @@ function calcReturnRate(currentPrice, buyPrice) {
   return ((currentPrice - buyPrice) / buyPrice) * 100;
 }
 
+function tickerToYahooSymbol(ticker) {
+  if (typeof ticker !== "string") return "";
+  if (ticker.endsWith(".KS") || ticker.endsWith(".KQ")) return ticker;
+  if (/^\d{6}$/.test(ticker)) return `${ticker}.KS`;
+  return ticker;
+}
+
+function shouldUseMockFallback() {
+  const host = window.location.hostname;
+  return host === "localhost" || host === "127.0.0.1";
+}
+
 async function fetchStrict(url, label) {
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`${label} fetch failed (${response.status})`);
   }
   return response.json();
+}
+
+async function fetchPortfolioFromStaticFile() {
+  const data = await fetchStrict(apiConfig.endpoints.portfolioStatic, "portfolio-static");
+  const holdings = Array.isArray(data?.holdings) ? data.holdings : [];
+  return holdings.map((item) => ({
+    ticker: tickerToYahooSymbol(item.ticker || ""),
+    name: item.name || "",
+    holdingQty: Number(item.holdingQty || 0),
+    buyPrice: Number(item.buyPrice || 0),
+    snapshotDate: item.snapshotDate || "",
+  }));
+}
+
+async function fetchPricesFromStaticFile() {
+  const data = await fetchStrict(apiConfig.endpoints.pricesStatic, "prices-static");
+  if (!data || typeof data !== "object") return {};
+  return data;
 }
 
 function setSystemStatus(type, message) {
@@ -213,14 +270,34 @@ function getVisibleStocks() {
   return sorted;
 }
 
+function loadCachedPrices() {
+  try {
+    const raw = window.localStorage.getItem("whereisinvest:lastPrices");
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveCachedPrices(prices) {
+  try {
+    window.localStorage.setItem("whereisinvest:lastPrices", JSON.stringify(prices || {}));
+  } catch {
+    // Ignore storage failures (private mode, quota, etc.)
+  }
+}
+
 function renderStocks() {
   dom.stockList.innerHTML = "";
   const visibleStocks = getVisibleStocks();
   const missingQtyCount = appState.stocks.filter((item) => !Number(item.holdingQty || 0)).length;
+  const missingBuyPriceCount = appState.stocks.filter((item) => !Number(item.buyPrice || 0)).length;
 
   dom.stockSummary.textContent =
     `표시 ${visibleStocks.length} / 전체 ${appState.stocks.length} · ` +
-    `수량 미입력 ${missingQtyCount}`;
+    `수량 미입력 ${missingQtyCount} · 매입단가 미입력 ${missingBuyPriceCount}`;
 
   if (!visibleStocks.length) {
     dom.stockList.innerHTML = '<div class="empty-state">조건에 맞는 종목이 없습니다.</div>';
@@ -267,6 +344,42 @@ function renderStocks() {
 
     dom.stockList.appendChild(fragment);
   }
+}
+
+function renderSourceSection() {
+  if (!dom.sourceList || !dom.reliabilityNote) return;
+
+  dom.sourceList.innerHTML = "";
+  for (const source of DATA_SOURCES) {
+    const li = document.createElement("li");
+    const a = document.createElement("a");
+    a.href = source.url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.textContent = source.label;
+    const note = document.createElement("span");
+    note.textContent = source.note;
+    li.appendChild(a);
+    li.appendChild(note);
+    dom.sourceList.appendChild(li);
+  }
+
+  const total = appState.stocks.length || 0;
+  const reliableQty = appState.stocks.filter((x) => Number(x.holdingQty || 0) > 0).length;
+  const reliableBuy = appState.stocks.filter((x) => Number(x.buyPrice || 0) > 0).length;
+  const qtyRate = total ? ((reliableQty / total) * 100).toFixed(1) : "0.0";
+  const buyRate = total ? ((reliableBuy / total) * 100).toFixed(1) : "0.0";
+  const latestSnapshotYear = appState.stocks.reduce((acc, item) => {
+    const year = Number(String(item.snapshotDate || "").slice(0, 4));
+    if (Number.isFinite(year) && year > acc) return year;
+    return acc;
+  }, 0);
+
+  dom.reliabilityNote.textContent =
+    `현재 화면 기준 데이터 커버리지: 보유수량 ${reliableQty}/${total} (${qtyRate}%), ` +
+    `매입단가 ${reliableBuy}/${total} (${buyRate}%). ` +
+    `데이터 기준 국민연금 투자종목 최신 공개 연도는 ${latestSnapshotYear || "-"}입니다 ` +
+    `(연도 말 세부 내역은 다음 해 3분기 공시 규정).`;
 }
 
 function renderNews() {
@@ -328,6 +441,7 @@ function renderAll() {
   ensureSelectedTicker();
   renderStocks();
   renderNews();
+  renderSourceSection();
 }
 
 async function refreshAll() {
@@ -343,26 +457,55 @@ async function refreshAll() {
   ]);
 
   const degraded = [];
+  const allowMock = shouldUseMockFallback();
 
   if (results[0].status === "fulfilled") {
     appState.stocks = results[0].value;
   } else {
-    appState.stocks = mockData.portfolio;
-    degraded.push("보유종목");
+    try {
+      appState.stocks = await fetchPortfolioFromStaticFile();
+      degraded.push("보유종목(정적파일)");
+    } catch {
+      if (allowMock) {
+        appState.stocks = mockData.portfolio;
+        degraded.push("보유종목");
+      } else {
+        appState.stocks = [];
+        degraded.push("보유종목(연결실패)");
+      }
+    }
   }
 
   if (results[1].status === "fulfilled") {
     appState.prices = results[1].value;
-  } else {
+    saveCachedPrices(appState.prices);
+  } else if (allowMock) {
     appState.prices = mockData.prices;
     degraded.push("가격");
+  } else {
+    const cached = loadCachedPrices();
+    if (Object.keys(cached).length) {
+      appState.prices = cached;
+      degraded.push("가격(캐시)");
+    } else {
+      try {
+        appState.prices = await fetchPricesFromStaticFile();
+        degraded.push("가격(정적스냅샷)");
+      } catch {
+        appState.prices = {};
+        degraded.push("가격(연결실패)");
+      }
+    }
   }
 
   if (results[2].status === "fulfilled") {
     appState.news = results[2].value;
-  } else {
+  } else if (allowMock) {
     appState.news = mockData.news;
     degraded.push("뉴스");
+  } else {
+    appState.news = [];
+    degraded.push("뉴스(연결실패)");
   }
 
   renderAll();

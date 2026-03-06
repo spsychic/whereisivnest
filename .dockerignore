@@ -1,0 +1,5 @@
+.git
+exports
+firebase-debug.log
+*.log
+.env

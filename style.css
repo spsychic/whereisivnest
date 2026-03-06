@@ -231,6 +231,46 @@ h1, h2, h3, p {
   color: var(--muted);
 }
 
+.source-box {
+  margin-top: 16px;
+  border: 1px solid #d6e0ec;
+  border-radius: 12px;
+  padding: 12px;
+  background: #f9fcff;
+}
+
+.source-note {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.source-list {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.source-list li {
+  margin: 6px 0;
+}
+
+.source-list a {
+  color: #1f4f8a;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.source-list a:hover {
+  text-decoration: underline;
+}
+
+.source-list span {
+  display: block;
+  color: #60748b;
+  font-size: 12px;
+}
+
 .ad-box {
   margin-top: 16px;
   border: 1px dashed #b8c4d4;

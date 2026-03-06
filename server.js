@@ -299,10 +299,6 @@ async function buildPortfolioData() {
     if (!buyPrice && item.snapshotDate && shouldResolveHistorical) {
       buyPrice = await fetchHistoricalClose(symbol, item.snapshotDate);
     }
-    if (!buyPrice) {
-      // For large portfolios, avoid per-symbol historical lookups and use current price as baseline.
-      buyPrice = Number(currentPrices[symbol] || 0);
-    }
     resolved.push({
       ticker: symbol,
       name: item.name,
@@ -537,6 +533,15 @@ async function handleStatic(req, res, pathname) {
 const server = http.createServer(async (req, res) => {
   const reqUrl = new URL(req.url, `http://${req.headers.host || "localhost"}`);
   const pathname = decodeURIComponent(reqUrl.pathname);
+
+  if (pathname === "/health") {
+    sendJson(res, 200, {
+      status: "ok",
+      service: "whereisinvest",
+      time: new Date().toISOString(),
+    });
+    return;
+  }
 
   if (pathname.startsWith("/api/")) {
     await handleApi(req, res, pathname);
