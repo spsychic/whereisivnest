@@ -96,6 +96,11 @@
     <a href="/disclaimer.html">면책 고지</a>
   </footer>
 
+  <section class="panel" style="margin-top:12px;" aria-label="댓글">
+    <h2 style="margin-bottom:10px;">댓글</h2>
+    <div id="disqus_thread"></div>
+  </section>
+
   <template id="stock-item-template">
     <article class="stock-item">
       <button class="stock-head" type="button">
@@ -116,5 +121,15 @@
 
   <script defer type="text/javascript" src="/config.js"></script>
   <script defer type="text/javascript" src="/main.js"></script>
+  <script>
+    (function() {
+      var d = document;
+      var s = d.createElement("script");
+      s.src = "https://spsychic.disqus.com/embed.js";
+      s.setAttribute("data-timestamp", String(+new Date()));
+      (d.head || d.body).appendChild(s);
+    })();
+  </script>
+  <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
 </body>
 </html>
