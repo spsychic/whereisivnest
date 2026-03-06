@@ -1,5 +1,5 @@
 window.WHEREISINVEST_CONFIG = {
-  formspreeEndpoint: "",
+  formspreeEndpoint: "https://formspree.io/f/xgolpvzg",
   adsenseClient: "",
   adsenseSlot: "",
 };
