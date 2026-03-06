@@ -30,6 +30,9 @@ const dom = {
   stockList: document.getElementById("stock-list"),
   newsList: document.getElementById("news-list"),
   stockTemplate: document.getElementById("stock-item-template"),
+  contactForm: document.getElementById("contact-form"),
+  contactSubmit: document.getElementById("contact-submit"),
+  contactStatus: document.getElementById("contact-status"),
 };
 
 const apiConfig = {
@@ -578,9 +581,60 @@ function setupControls() {
   });
 }
 
+function setContactStatus(type, message) {
+  if (!dom.contactStatus) return;
+  dom.contactStatus.className = `contact-status ${type}`;
+  dom.contactStatus.textContent = message;
+}
+
+function setupContactForm() {
+  if (!dom.contactForm || !dom.contactSubmit) return;
+
+  const action = String(dom.contactForm.getAttribute("action") || "").trim();
+  const enabled = Boolean(action) && action !== "#" && !action.includes("__FORMSPREE_ENDPOINT__");
+
+  if (!enabled) {
+    const fields = dom.contactForm.querySelectorAll("input, textarea, button");
+    for (const field of fields) field.disabled = true;
+    setContactStatus("warn", "문의 폼이 아직 활성화되지 않았습니다. 관리자 설정 후 이용 가능합니다.");
+    return;
+  }
+
+  dom.contactForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (dom.contactSubmit.disabled) return;
+
+    dom.contactSubmit.disabled = true;
+    dom.contactSubmit.textContent = "전송 중...";
+    setContactStatus("loading", "문의 내용을 전송하고 있습니다.");
+
+    try {
+      const response = await fetch(action, {
+        method: "POST",
+        body: new FormData(dom.contactForm),
+        headers: { Accept: "application/json" },
+      });
+
+      if (!response.ok) {
+        throw new Error(`form submit failed (${response.status})`);
+      }
+
+      dom.contactForm.reset();
+      setContactStatus("ok", "문의가 접수되었습니다. 확인 후 답변드리겠습니다.");
+    } catch (error) {
+      console.error(error);
+      setContactStatus("warn", "문의 전송에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      dom.contactSubmit.disabled = false;
+      dom.contactSubmit.textContent = "문의 보내기";
+    }
+  });
+}
+
 function boot() {
   dom.refreshButton.addEventListener("click", refreshAll);
   setupControls();
+  setupContactForm();
   refreshAll();
   setupIntervals();
 }

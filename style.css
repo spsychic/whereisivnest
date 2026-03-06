@@ -290,6 +290,75 @@ h1, h2, h3, p {
   background: #f7fafc;
 }
 
+.contact-box {
+  margin-top: 16px;
+  border: 1px solid #d6e0ec;
+  border-radius: 12px;
+  padding: 12px;
+  background: #f9fcff;
+}
+
+.contact-note {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+#contact-form {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#contact-form input,
+#contact-form textarea {
+  width: 100%;
+  border: 1px solid #c8d5e5;
+  border-radius: 10px;
+  padding: 9px 10px;
+  background: #fff;
+  font: inherit;
+}
+
+#contact-form textarea {
+  resize: vertical;
+}
+
+#contact-submit {
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: #fff;
+  background: var(--accent);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+#contact-submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.contact-status {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  min-height: 18px;
+}
+
+.contact-status.ok {
+  color: #1d6c39;
+}
+
+.contact-status.warn {
+  color: #8a3026;
+}
+
+.contact-status.loading {
+  color: #7a5812;
+}
+
 .empty-state {
   padding: 12px;
   border: 1px dashed var(--line);

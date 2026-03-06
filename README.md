@@ -89,6 +89,14 @@ npm start
 2. 서버 재시작(`npm start`)
 3. 배포 후 `https://도메인/ads.txt` 접근 가능 여부 확인
 
+## Formspree 문의 폼 적용
+
+1. Formspree에서 폼을 생성하고 endpoint URL을 확인
+2. `.env`에 아래 값 입력
+- `FORMSPREE_ENDPOINT=https://formspree.io/f/xxxxxxxx`
+3. 서버 재시작(`npm start`)
+4. 메인 우측 하단 "문의하기"에서 테스트 전송
+
 ## 직접 준비해야 하는 것
 
 - `data/portfolio.json`의 실제 국민연금 보유종목/수량 업데이트

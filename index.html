@@ -76,6 +76,20 @@
           data-full-width-responsive="true"
         ></ins>
       </section>
+
+      <section class="contact-box" aria-label="문의하기">
+        <h3>문의하기</h3>
+        <p class="contact-note">
+          오류 제보/제휴 문의는 아래 폼으로 보내주세요.
+        </p>
+        <form id="contact-form" action="__FORMSPREE_ENDPOINT__" method="POST">
+          <input type="text" name="name" placeholder="이름 (선택)" />
+          <input type="email" name="email" placeholder="이메일" required />
+          <textarea name="message" rows="4" placeholder="문의 내용을 입력해 주세요." required></textarea>
+          <button id="contact-submit" type="submit">문의 보내기</button>
+        </form>
+        <p id="contact-status" class="contact-status"></p>
+      </section>
     </aside>
   </main>
 

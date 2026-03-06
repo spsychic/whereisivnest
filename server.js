@@ -13,6 +13,7 @@ const NAVER_CLIENT_ID = process.env.NAVER_CLIENT_ID || "";
 const NAVER_CLIENT_SECRET = process.env.NAVER_CLIENT_SECRET || "";
 const ADSENSE_CLIENT = process.env.ADSENSE_CLIENT || "ca-pub-REPLACE_ME";
 const ADSENSE_SLOT = process.env.ADSENSE_SLOT || "REPLACE_ME";
+const FORMSPREE_ENDPOINT = process.env.FORMSPREE_ENDPOINT || "";
 const PORTFOLIO_LIMIT = Number(process.env.PORTFOLIO_LIMIT || 120);
 const METRICS_LOG_INTERVAL_MS = 10 * 60_000;
 const PRICES_CACHE_TTL_MS = 60_000;
@@ -517,6 +518,7 @@ async function handleStatic(req, res, pathname) {
       let text = data.toString("utf8");
       text = text.replaceAll("__ADSENSE_CLIENT__", ADSENSE_CLIENT);
       text = text.replaceAll("__ADSENSE_SLOT__", ADSENSE_SLOT);
+      text = text.replaceAll("__FORMSPREE_ENDPOINT__", FORMSPREE_ENDPOINT || "#");
       res.end(text);
       return;
     }
