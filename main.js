@@ -580,15 +580,15 @@ async function refreshNewsOnly() {
 function safelyRenderAds() {
   try {
     const adSlot = document.querySelector(".ad-slot");
-    if (!adSlot) return;
-
     const client = String(runtimeConfig.adsenseClient || "").trim();
     const slot = String(runtimeConfig.adsenseSlot || "").trim();
-    if (!isValidAdsenseClient(client) || !isValidAdsenseSlot(slot)) return;
+    if (!isValidAdsenseClient(client)) return;
+
+    loadAdsenseScript(client);
+    if (!adSlot || !isValidAdsenseSlot(slot)) return;
 
     adSlot.setAttribute("data-ad-client", client);
     adSlot.setAttribute("data-ad-slot", slot);
-    loadAdsenseScript(client);
     if (window.adsbygoogle) (window.adsbygoogle = window.adsbygoogle || []).push({});
   } catch (error) {
     console.debug("AdSense rendering skipped:", error.message);
