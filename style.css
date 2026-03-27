@@ -162,7 +162,7 @@ p {
 
 .hero-cards {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -181,7 +181,7 @@ p {
 
 .hero-cards p {
   margin-top: 8px;
-  font-size: 28px;
+  font-size: 25px;
   font-weight: 800;
   letter-spacing: -0.02em;
 }
@@ -221,6 +221,39 @@ p {
   background: #fff3f1;
   border-color: #f1c5bf;
   color: #8f2f24;
+}
+
+.quick-banking {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 20px 8px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.quick-banking a {
+  display: block;
+  border-radius: 12px;
+  border: 1px solid #cfd9e8;
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+  padding: 12px;
+  text-decoration: none;
+  box-shadow: var(--shadow);
+}
+
+.quick-banking a strong {
+  display: block;
+  color: #0c2f63;
+  font-size: 15px;
+}
+
+.quick-banking a span {
+  display: block;
+  margin-top: 5px;
+  color: #5f7087;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .layout {
@@ -584,6 +617,14 @@ p {
 
   .hero-bank {
     grid-template-columns: 1fr;
+  }
+
+  .hero-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .quick-banking {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .layout {

@@ -29,6 +29,8 @@ const dom = {
   statTotal: document.getElementById("stat-total"),
   statGain: document.getElementById("stat-gain"),
   statLoss: document.getElementById("stat-loss"),
+  statMarketValue: document.getElementById("stat-market-value"),
+  statAverageReturn: document.getElementById("stat-average-return"),
   newsStatus: document.getElementById("news-status"),
   reliabilityNote: document.getElementById("reliability-note"),
   sourceList: document.getElementById("source-list"),
@@ -332,6 +334,13 @@ function renderStocks() {
   const missingBuyPriceCount = appState.stocks.filter((item) => !Number(item.buyPrice || 0)).length;
   const gainCount = enrichedStocks.filter((item) => item.returnRate > 0).length;
   const lossCount = enrichedStocks.filter((item) => item.returnRate < 0).length;
+  const totalMarketValue = enrichedStocks.reduce((sum, item) => sum + Number(item.marketValue || 0), 0);
+  const validReturns = enrichedStocks
+    .filter((item) => Number(item.buyPrice || 0) > 0 && Number(item.currentPrice || 0) > 0)
+    .map((item) => item.returnRate);
+  const averageReturn = validReturns.length
+    ? validReturns.reduce((sum, value) => sum + value, 0) / validReturns.length
+    : 0;
 
   dom.stockSummary.textContent =
     `표시 ${visibleStocks.length} / 전체 ${appState.stocks.length} · ` +
@@ -339,6 +348,8 @@ function renderStocks() {
   if (dom.statTotal) dom.statTotal.textContent = `${appState.stocks.length}개`;
   if (dom.statGain) dom.statGain.textContent = `${gainCount}개`;
   if (dom.statLoss) dom.statLoss.textContent = `${lossCount}개`;
+  if (dom.statMarketValue) dom.statMarketValue.textContent = `${formatNumber(Math.round(totalMarketValue))}원`;
+  if (dom.statAverageReturn) dom.statAverageReturn.textContent = formatPercent(averageReturn);
 
   if (!visibleStocks.length) {
     dom.stockList.innerHTML = '<div class="empty-state">조건에 맞는 종목이 없습니다.</div>';
