@@ -12,21 +12,65 @@
   <link href="/style.css" rel="stylesheet" />
 </head>
 <body>
-  <header class="topbar">
+  <div class="utility-bar">
+    <div class="utility-inner">
+      <p>금융 정보 참고 서비스 | 실시간 API 상태에 따라 수치가 지연될 수 있습니다.</p>
+      <nav aria-label="상단 메뉴">
+        <a href="/about.html">서비스 소개</a>
+        <a href="/methodology.html">산출 방법론</a>
+        <a href="/privacy.html">개인정보처리방침</a>
+      </nav>
+    </div>
+  </div>
+
+  <header class="brand-header">
     <div>
       <h1>Where Is Invest</h1>
       <p class="subtitle">국민연금 투자 추정 현황 대시보드</p>
     </div>
     <div class="topbar-actions">
-      <p id="last-updated">마지막 갱신: -</p>
-      <button id="refresh-button" type="button">지금 새로고침</button>
+      <button id="refresh-button" type="button">전체 데이터 갱신</button>
     </div>
   </header>
+
+  <section class="hero-bank" aria-label="핵심 지표">
+    <div class="hero-main">
+      <h2>오늘의 포트폴리오 요약</h2>
+      <p>
+        공시 종목 기준 추정 포트폴리오를 수익/손실 관점으로 빠르게 점검할 수 있도록
+        구성한 대시보드입니다.
+      </p>
+      <p id="last-updated" class="hero-updated">마지막 갱신: -</p>
+      <div class="hero-actions">
+        <a href="#stocks">종목 현황 보기</a>
+        <a href="#news">뉴스 확인</a>
+        <a href="#contact-form">오류 제보</a>
+      </div>
+    </div>
+    <div class="hero-cards" aria-label="요약 카드">
+      <article>
+        <h3>전체 종목</h3>
+        <p id="stat-total">-</p>
+      </article>
+      <article>
+        <h3>수익 종목</h3>
+        <p id="stat-gain" class="up">-</p>
+      </article>
+      <article>
+        <h3>손실 종목</h3>
+        <p id="stat-loss" class="down">-</p>
+      </article>
+    </div>
+  </section>
+
   <p id="system-status" class="system-status">초기 데이터를 불러오는 중입니다...</p>
 
   <main class="layout">
-    <section class="panel panel-left">
-      <h2>보유 종목</h2>
+    <section id="stocks" class="panel panel-left">
+      <div class="section-head">
+        <h2>보유 종목 현황</h2>
+        <span class="badge">Portfolio</span>
+      </div>
       <p class="panel-description">
         공시 데이터와 시세 기반으로 계산한 추정 보유 내역/수익률을 제공합니다.
       </p>
@@ -50,24 +94,27 @@
     </section>
 
     <aside class="panel panel-right">
-      <h2>관련 뉴스</h2>
-      <p class="panel-description">
-        종목 클릭 시 해당 종목 중심 뉴스로 정렬됩니다.
-      </p>
-      <p id="news-status" class="news-status"></p>
-      <div id="news-list" class="news-list"></div>
+      <section id="news">
+        <div class="section-head">
+          <h2>관련 뉴스</h2>
+          <span class="badge">News</span>
+        </div>
+        <p class="panel-description">
+          종목 클릭 시 해당 종목 중심 뉴스로 정렬됩니다.
+        </p>
+        <p id="news-status" class="news-status"></p>
+        <div id="news-list" class="news-list"></div>
+      </section>
 
       <section class="source-box" aria-label="데이터 출처">
-        <h3>데이터 출처</h3>
+        <h3>데이터 출처 및 신뢰도</h3>
         <p id="reliability-note" class="source-note"></p>
         <ul id="source-list" class="source-list"></ul>
       </section>
 
       <section class="ad-box" aria-label="광고 영역">
         <h3>광고</h3>
-        <p class="ad-note">
-          광고 설정은 <code>config.js</code>에서 관리됩니다.
-        </p>
+        <p class="ad-note">서비스 운영을 위한 광고 영역입니다.</p>
         <ins
           class="adsbygoogle ad-slot"
           style="display:block"
@@ -92,33 +139,25 @@
     </aside>
   </main>
 
-  <section class="panel info-panel" aria-label="서비스 소개">
-    <h2>이 서비스가 제공하는 가치</h2>
-    <p class="panel-description" style="margin-top:10px;">
-      Where Is Invest는 단순 뉴스 모음이 아니라, 국민연금 공시 종목을 기준으로
-      "데이터 해석 관점"을 함께 제공하는 리서치 대시보드입니다. 개별 종목 수익률은
-      추정치이며 실거래 내역이 아닌 공시/시세 결합값이라는 점을 명확히 고지합니다.
-    </p>
+  <section class="panel info-panel" aria-label="서비스 안내">
+    <h2>서비스 이용 안내</h2>
     <div class="info-grid">
       <article>
-        <h3>1. 데이터 해석 원칙</h3>
+        <h3>데이터 해석 원칙</h3>
         <p>
-          보유 수량, 기준일, 추정 매입단가를 분리해서 보여주며, 값이 비어 있거나
-          추정치인 경우 "미입력/추정" 상태를 숨기지 않고 노출합니다.
+          보유 수량, 기준일, 추정 매입단가를 분리해 제공하며 추정값 여부를 숨기지 않고 표시합니다.
         </p>
       </article>
       <article>
-        <h3>2. 사용자가 바로 확인할 항목</h3>
+        <h3>계산 결과의 한계</h3>
         <p>
-          종목별로 현재가, 기준일, 수익률을 같은 화면에서 교차 비교할 수 있도록
-          구성했습니다. 수익률/평가금액 정렬과 손익 필터를 지원합니다.
+          공시와 실시간 시세는 기준 시점이 달라 실제 운용 결과와 차이가 발생할 수 있습니다.
         </p>
       </article>
       <article>
-        <h3>3. 한계와 주의사항</h3>
+        <h3>투자 유의사항</h3>
         <p>
-          공시와 실시간 체결은 시점이 다르므로 실제 운용 결과와 차이가 발생할 수
-          있습니다. 본 사이트는 투자 판단 참고용 정보이며 투자 권유가 아닙니다.
+          본 서비스는 참고용 정보 제공을 목적으로 하며 특정 금융상품 매수/매도를 권유하지 않습니다.
         </p>
       </article>
     </div>
@@ -131,8 +170,8 @@
     <a href="/disclaimer.html">면책 고지</a>
   </footer>
 
-  <section class="panel" style="margin-top:12px;" aria-label="댓글">
-    <h2 style="margin-bottom:10px;">댓글</h2>
+  <section class="panel comments-panel" aria-label="댓글">
+    <h2>댓글</h2>
     <div id="disqus_thread"></div>
   </section>
 

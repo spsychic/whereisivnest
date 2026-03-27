@@ -26,6 +26,9 @@ const dom = {
   stockSort: document.getElementById("stock-sort"),
   returnFilter: document.getElementById("return-filter"),
   stockSummary: document.getElementById("stock-summary"),
+  statTotal: document.getElementById("stat-total"),
+  statGain: document.getElementById("stat-gain"),
+  statLoss: document.getElementById("stat-loss"),
   newsStatus: document.getElementById("news-status"),
   reliabilityNote: document.getElementById("reliability-note"),
   sourceList: document.getElementById("source-list"),
@@ -324,12 +327,18 @@ function saveCachedPrices(prices) {
 function renderStocks() {
   dom.stockList.innerHTML = "";
   const visibleStocks = getVisibleStocks();
+  const enrichedStocks = getEnrichedStocks();
   const missingQtyCount = appState.stocks.filter((item) => !Number(item.holdingQty || 0)).length;
   const missingBuyPriceCount = appState.stocks.filter((item) => !Number(item.buyPrice || 0)).length;
+  const gainCount = enrichedStocks.filter((item) => item.returnRate > 0).length;
+  const lossCount = enrichedStocks.filter((item) => item.returnRate < 0).length;
 
   dom.stockSummary.textContent =
     `표시 ${visibleStocks.length} / 전체 ${appState.stocks.length} · ` +
     `수량 미입력 ${missingQtyCount} · 매입단가 미입력 ${missingBuyPriceCount}`;
+  if (dom.statTotal) dom.statTotal.textContent = `${appState.stocks.length}개`;
+  if (dom.statGain) dom.statGain.textContent = `${gainCount}개`;
+  if (dom.statLoss) dom.statLoss.textContent = `${lossCount}개`;
 
   if (!visibleStocks.length) {
     dom.stockList.innerHTML = '<div class="empty-state">조건에 맞는 종목이 없습니다.</div>';
